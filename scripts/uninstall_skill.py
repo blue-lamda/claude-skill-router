@@ -21,7 +21,7 @@ import argparse
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).parent
-DEFAULT_SKILLS_DIR = Path(os.path.expanduser("~/.claude/skills/user"))
+DEFAULT_SKILLS_DIR = Path(os.path.expanduser("~/.claude/skills"))
 
 # Re-use run_update from install_skill to avoid duplication
 sys.path.insert(0, str(SCRIPT_DIR))

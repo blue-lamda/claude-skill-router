@@ -244,7 +244,7 @@ pip install watchdog pyyaml
 ### 2. Install the skill
 
 ```bash
-cp -r . ~/.claude/skills/user/skill-router/
+cp -r . ~/.claude/skills/skill-router/
 ```
 
 ### 3. Start the watcher (optional but recommended)

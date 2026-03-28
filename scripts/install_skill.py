@@ -34,7 +34,7 @@ from urllib.parse import urlparse
 SCRIPT_DIR = Path(__file__).parent
 UPDATE_SCRIPT = SCRIPT_DIR / "update_router.py"
 ROUTER_SKILL = SCRIPT_DIR.parent / "SKILL.md"
-DEFAULT_SKILLS_DIR = Path(os.path.expanduser("~/.claude/skills/user"))
+DEFAULT_SKILLS_DIR = Path(os.path.expanduser("~/.claude/skills"))
 
 # Only allow safe characters in skill names used as directory names
 _SAFE_NAME_RE = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$')
