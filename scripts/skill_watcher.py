@@ -111,26 +111,31 @@ class SkillChangeHandler(FileSystemEventHandler):
         self._run_update()
 
     def _install_skill_file(self, skill_file: Path):
-        """Unzip a .skill file into the skills directory."""
+        """Unzip a .skill file into the skills directory, rejecting Zip Slip paths."""
         skill_name = skill_file.stem
         target_dir = self.skills_dir / "user" / skill_name
         target_dir.mkdir(parents=True, exist_ok=True)
+        dest_resolved = target_dir.resolve()
 
         try:
             with zipfile.ZipFile(skill_file, "r") as z:
-                # Strip top-level folder if present
                 members = z.namelist()
-                prefix = members[0] if members[0].endswith("/") else ""
+                prefix = members[0] if members and members[0].endswith("/") else ""
                 for member in members:
                     stripped = member[len(prefix):] if prefix else member
                     if not stripped:
                         continue
-                    dest = target_dir / stripped
+                    out_path = (target_dir / stripped).resolve()
+                    if not str(out_path).startswith(str(dest_resolved)):
+                        log.error("Zip Slip blocked: '%s' would escape install dir. Aborting.", member)
+                        import shutil as _shutil
+                        _shutil.rmtree(target_dir, ignore_errors=True)
+                        return
                     if member.endswith("/"):
-                        dest.mkdir(parents=True, exist_ok=True)
+                        out_path.mkdir(parents=True, exist_ok=True)
                     else:
-                        dest.parent.mkdir(parents=True, exist_ok=True)
-                        with z.open(member) as src, open(dest, "wb") as dst:
+                        out_path.parent.mkdir(parents=True, exist_ok=True)
+                        with z.open(member) as src, open(out_path, "wb") as dst:
                             dst.write(src.read())
             log.info("Installed %s to %s", skill_name, target_dir)
         except (OSError, zipfile.BadZipFile) as e:

@@ -26,6 +26,17 @@ import yaml
 
 ROUTER_SKILL_NAME = "skill-router"
 
+_CONTROL_CHARS_RE = re.compile(r'[\r\n\x00-\x1f\x7f]')
+
+
+def _safe_md(value: str) -> str:
+    """Strip newlines and control characters from a value before writing into markdown.
+
+    Prevents a malicious skill's trigger phrases or intent from injecting
+    fake skill entries into the router registry (markdown injection).
+    """
+    return _CONTROL_CHARS_RE.sub(" ", str(value)).strip()
+
 CATEGORY_ORDER = ["writing", "documents", "design", "files", "skills", "meta"]
 
 CATEGORY_LABELS = {
@@ -166,13 +177,13 @@ def build_registry_section(skills: list[dict]) -> str:
 
         for s in cat_skills:
             lines.append("---\n")
-            lines.append(f"**{s['name']}**")
-            lines.append(f"Path: `{s['load_path']}`")
-            lines.append(f"Intent: {s['intent']}")
+            lines.append(f"**{_safe_md(s['name'])}**")
+            lines.append(f"Path: `{_safe_md(s['load_path'])}`")
+            lines.append(f"Intent: {_safe_md(s['intent'])}")
             lines.append("Trigger phrases:")
             for t in s["triggers"]:
-                lines.append(f'- "{t}"')
-            lines.append(f"Conflicts: {s['conflicts']}")
+                lines.append(f'- "{_safe_md(t)}"')
+            lines.append(f"Conflicts: {_safe_md(s['conflicts'])}")
             lines.append(f"Priority: {s['priority']}\n")
 
     # Always append the router self-reference
