@@ -257,7 +257,34 @@ nohup python scripts/skill_watcher.py \
 
 After this, every new skill you install updates the router automatically.
 
-### 4. Run as a background service on macOS (optional)
+### 4. Auto-load the router at session start (optional)
+
+By default, the router only activates when you invoke `/skill-router` manually. To have it load automatically at the start of every Claude Code session, add a `SessionStart` hook to `~/.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"\nimport json, pathlib\nskill_path = pathlib.Path.home() / '.claude/skills/skill-router/SKILL.md'\nif skill_path.exists():\n    content = skill_path.read_text(encoding='utf-8')\n    print(json.dumps({'hookSpecificOutput': {'hookEventName': 'SessionStart', 'additionalContext': content}}))\n\" 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Token cost:** The router SKILL.md is ~11KB (~2,500 tokens), injected once per session. This is worth it if you use natural language routing regularly. If you mostly use explicit `/skill_name` commands, skip this — the hook adds overhead without benefit.
+
+**To undo:** Remove the `hooks` block from `~/.claude/settings.json` (or reset the file to `{}`).
+
+---
+
+### 5. Run as a background service on macOS (optional)
 
 Create `~/Library/LaunchAgents/com.claude.skill-watcher.plist`:
 
