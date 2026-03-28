@@ -337,8 +337,7 @@ Found a bypass or new attack pattern? Open an issue at [blue-lamda/claude-skill-
 
 ## Roadmap
 
-- [ ] Vector routing upgrade path (embeddings + FAISS) for 50+ skills per category
-- [ ] `embed_skills.py` — pre-compute trigger phrase embeddings
+- [ ] **Vector routing** — `embed_skills.py` + FAISS index for O(log n) routing at 50+ skills per category. Current flat-file approach is fine up to ~30-40 skills; beyond that, token overhead and accuracy degrade linearly. The existing `category`/`intent`/`triggers` frontmatter maps directly to this pipeline — no restructuring needed when ready.
 - [ ] Skill conflict detector — flags overlapping trigger phrases before they cause issues
 - [ ] Skill signature verification — cryptographic signing for trusted skill distribution
 - [ ] Web UI for browsing and managing installed skills
