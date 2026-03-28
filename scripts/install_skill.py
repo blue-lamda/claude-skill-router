@@ -17,6 +17,7 @@ Options:
 """
 
 import os
+import re
 import sys
 import shutil
 import zipfile
@@ -24,6 +25,7 @@ import tempfile
 import argparse
 import subprocess
 from pathlib import Path
+from urllib.error import URLError
 from urllib.request import urlretrieve
 from urllib.parse import urlparse
 
@@ -73,8 +75,11 @@ def install_skill_file(skill_file: Path, target_dir: Path) -> Path:
 
 def install_github_repo(repo_url: str, target_dir: Path, subdir: str | None) -> Path:
     """Clone a GitHub repo and install the skill from it."""
-    # Convert github.com URL to zip download URL
     parsed = urlparse(repo_url)
+    if parsed.scheme != "https" or parsed.netloc not in ("github.com", "www.github.com"):
+        print(f"[error] Only https://github.com URLs are supported: {repo_url}")
+        sys.exit(1)
+
     path_parts = parsed.path.strip("/").split("/")
     if len(path_parts) < 2:
         print(f"[error] Invalid GitHub URL: {repo_url}")
@@ -89,13 +94,13 @@ def install_github_repo(repo_url: str, target_dir: Path, subdir: str | None) -> 
         zip_path = Path(tmp) / f"{repo}.zip"
 
         try:
-            urlretrieve(zip_url, zip_path)
-        except Exception:
+            urlretrieve(zip_url, zip_path)  # nosec B310 — URL validated as https://github.com above
+        except URLError:
             # Try 'master' branch if 'main' fails
             zip_url = zip_url.replace("/main.zip", "/master.zip")
             try:
-                urlretrieve(zip_url, zip_path)
-            except Exception as e:
+                urlretrieve(zip_url, zip_path)  # nosec B310
+            except URLError as e:
                 print(f"[error] Could not download repo: {e}")
                 sys.exit(1)
 
@@ -165,7 +170,6 @@ def install_local_dir(source: Path, target_dir: Path) -> Path:
 
 def _get_skill_name(skill_dir: Path) -> str | None:
     """Extract name from SKILL.md frontmatter."""
-    import re
     skill_md = skill_dir / "SKILL.md"
     if not skill_md.exists():
         return None
@@ -176,8 +180,8 @@ def _get_skill_name(skill_dir: Path) -> str | None:
             name_match = re.search(r"^name:\s*(.+)$", match.group(1), re.MULTILINE)
             if name_match:
                 return name_match.group(1).strip()
-    except Exception:
-        pass
+    except OSError as e:
+        print(f"  [warn] Could not read {skill_md}: {e}")
     return None
 
 
@@ -194,14 +198,14 @@ def run_update(skills_dir: Path):
     ]
     print("\nUpdating skill router...")
     try:
-        result = subprocess.run(cmd, timeout=30)
+        result = subprocess.run(cmd, check=False, timeout=30)
         if result.returncode == 0:
             print("[ok] Router updated.")
         else:
             print("[warn] Router update finished with errors. Check output above.")
     except subprocess.TimeoutExpired:
         print("[warn] Router update timed out.")
-    except Exception as e:
+    except OSError as e:
         print(f"[warn] Could not run update_router.py: {e}")
 
 

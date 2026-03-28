@@ -24,14 +24,16 @@ Dependencies:
 import os
 import sys
 import time
+import zipfile
 import logging
 import argparse
+import threading
 import subprocess
 from pathlib import Path
 
 try:
     from watchdog.observers import Observer
-    from watchdog.events import FileSystemEventHandler, FileCreatedEvent, FileModifiedEvent
+    from watchdog.events import FileSystemEventHandler
 except ImportError:
     print("[error] watchdog not installed.")
     print("  Run: pip install watchdog")
@@ -73,22 +75,20 @@ class SkillChangeHandler(FileSystemEventHandler):
 
     def on_created(self, event):
         if not event.is_directory and self._should_react(event.src_path):
-            log.info(f"New file detected: {event.src_path}")
+            log.info("New file detected: %s", event.src_path)
             self._schedule_update(event.src_path)
 
     def on_modified(self, event):
         if not event.is_directory and self._should_react(event.src_path):
             # Only react to SKILL.md modifications, not .skill drops (they don't get modified)
             if Path(event.src_path).name == "SKILL.md":
-                log.info(f"Skill modified: {event.src_path}")
+                log.info("Skill modified: %s", event.src_path)
                 self._schedule_update(event.src_path)
 
     def _schedule_update(self, trigger_path: str):
         self._last_event_time = time.time()
         if not self._pending:
             self._pending = True
-            # Run debounced update in a thread
-            import threading
             threading.Thread(target=self._debounced_update, args=(trigger_path,), daemon=True).start()
 
     def _debounced_update(self, trigger_path: str):
@@ -104,7 +104,7 @@ class SkillChangeHandler(FileSystemEventHandler):
         # If it's a .skill file, install it first
         p = Path(trigger_path)
         if p.suffix == ".skill" and self.install_dir and p.parent == self.install_dir:
-            log.info(f"Auto-installing .skill file: {p.name}")
+            log.info("Auto-installing .skill file: %s", p.name)
             self._install_skill_file(p)
 
         # Then always run the router update
@@ -112,7 +112,6 @@ class SkillChangeHandler(FileSystemEventHandler):
 
     def _install_skill_file(self, skill_file: Path):
         """Unzip a .skill file into the skills directory."""
-        import zipfile
         skill_name = skill_file.stem
         target_dir = self.skills_dir / "user" / skill_name
         target_dir.mkdir(parents=True, exist_ok=True)
@@ -133,9 +132,9 @@ class SkillChangeHandler(FileSystemEventHandler):
                         dest.parent.mkdir(parents=True, exist_ok=True)
                         with z.open(member) as src, open(dest, "wb") as dst:
                             dst.write(src.read())
-            log.info(f"Installed {skill_name} to {target_dir}")
-        except Exception as e:
-            log.error(f"Failed to install {skill_file}: {e}")
+            log.info("Installed %s to %s", skill_name, target_dir)
+        except (OSError, zipfile.BadZipFile) as e:
+            log.error("Failed to install %s: %s", skill_file, e)
 
     def _run_update(self):
         """Fire update_router.py."""
@@ -147,15 +146,15 @@ class SkillChangeHandler(FileSystemEventHandler):
         ]
         log.info("Running update_router.py...")
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            result = subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=30)
             if result.returncode == 0:
                 log.info("Router updated successfully.")
             else:
-                log.error(f"update_router.py failed:\n{result.stderr}")
+                log.error("update_router.py failed:\n%s", result.stderr)
         except subprocess.TimeoutExpired:
             log.error("update_router.py timed out.")
-        except Exception as e:
-            log.error(f"Failed to run update_router.py: {e}")
+        except OSError as e:
+            log.error("Failed to run update_router.py: %s", e)
 
 
 def main():
@@ -174,21 +173,21 @@ def main():
     install_dir = args.install_dir.resolve() if args.install_dir else None
 
     if not skills_dir.exists():
-        log.error(f"Skills directory not found: {skills_dir}")
+        log.error("Skills directory not found: %s", skills_dir)
         log.error("Create it or pass --skills-dir /correct/path")
         sys.exit(1)
 
     handler = SkillChangeHandler(skills_dir, install_dir, args.debounce)
     observer = Observer()
     observer.schedule(handler, str(skills_dir), recursive=True)
-    log.info(f"Watching skills: {skills_dir}")
+    log.info("Watching skills: %s", skills_dir)
 
     if install_dir:
         if install_dir.exists():
             observer.schedule(handler, str(install_dir), recursive=False)
-            log.info(f"Watching installs: {install_dir}")
+            log.info("Watching installs: %s", install_dir)
         else:
-            log.warning(f"Install dir not found, skipping: {install_dir}")
+            log.warning("Install dir not found, skipping: %s", install_dir)
 
     observer.start()
     log.info("Skill watcher running. Press Ctrl+C to stop.")

@@ -20,9 +20,9 @@ Usage:
 import os
 import re
 import argparse
-import yaml
 from pathlib import Path
 from collections import defaultdict
+import yaml
 
 ROUTER_SKILL_NAME = "skill-router"
 
@@ -132,7 +132,7 @@ def discover_skills(skills_dir: Path) -> list[dict]:
     if missing_fields:
         print(f"\n  [hint] {len(missing_fields)} skill(s) missing semantic frontmatter.")
         print("  Add 'category', 'intent', and 'triggers' to their SKILL.md for precise routing.")
-        for name, fields, path in missing_fields:
+        for name, fields, _ in missing_fields:
             print(f"    - {name}: missing {fields}")
 
     return skills
@@ -165,7 +165,7 @@ def build_registry_section(skills: list[dict]) -> str:
             continue
 
         for s in cat_skills:
-            lines.append(f"---\n")
+            lines.append("---\n")
             lines.append(f"**{s['name']}**")
             lines.append(f"Path: `{s['load_path']}`")
             lines.append(f"Intent: {s['intent']}")
@@ -196,9 +196,6 @@ def update_router(router_path: Path, new_registry: str, dry_run: bool = False) -
     content = router_path.read_text(encoding="utf-8")
 
     pattern = r"(## Skill Registry\n)(.*?)(\n---\n\n## Adding New Skills)"
-    replacement = new_registry + r"\n\3"
-
-    # Use a function-based replacement to avoid backreference issues
     match = re.search(pattern, content, flags=re.DOTALL)
     if not match:
         print("[error] Could not find '## Skill Registry' ... '## Adding New Skills' in router.")
@@ -251,12 +248,6 @@ def main():
 
     if not skills_dir.exists():
         print(f"[error] Skills directory not found: {skills_dir}")
-        return
-
-    try:
-        import yaml
-    except ImportError:
-        print("[error] PyYAML not installed. Run: pip install pyyaml")
         return
 
     skills = discover_skills(skills_dir)
