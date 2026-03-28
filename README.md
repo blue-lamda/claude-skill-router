@@ -34,11 +34,24 @@ At 10 skills it's fine. At 50 it gets messy. At 500 it breaks.
 
 The router keeps itself up to date automatically via a file watcher that runs in the background.
 
-### Does this replace `/skill_name` slash commands?
+### `/skill_name`, the router, or neither — what's the difference?
 
-Not entirely. `/skill_name` is Claude Code's mechanism for explicitly loading a skill — that still works the same way. What the router adds is a **natural language layer on top**: instead of typing `/qa test my site`, you can say *"can you test my site and find bugs"* and the router figures out that means `qa` and loads it.
+There are three ways Claude can handle a request, and they produce meaningfully different results:
 
-The router only works when it's already loaded into your Claude session. Either invoke it once with `/skill-router`, or set up a hook to auto-load it at session start. Without one of those, Claude doesn't know the router exists and you're back to slash commands.
+| | `/skill_name` | Router | Neither |
+|---|---|---|---|
+| **How** | Explicit slash command | Natural language | Just talking to Claude |
+| **Skill loaded?** | Yes — always | Yes — when confident | No |
+| **Output format** | Consistent, defined by skill | Consistent, defined by skill | Varies every time |
+| **Example** | `/changelog-generator` | *"write release notes"* | *"changelog please"* |
+
+**`/skill_name` is not going away.** It's Claude Code's direct invocation mechanism and always works — use it when you know exactly which skill you want.
+
+**The router adds natural language on top.** Say what you want in plain English and the router figures out which skill applies. The output is identical to using the slash command directly because the same `SKILL.md` gets loaded either way.
+
+**Without either**, Claude will attempt the task on its own using general capabilities — but the result is inconsistent. Ask for a changelog twice and you'll get two different formats, levels of detail, and writing styles. The skill defines the process; without it, Claude is improvising.
+
+The router only works when it's already loaded into your Claude session. Either invoke it once with `/skill-router`, or set up a hook to auto-load it at session start.
 
 ---
 
