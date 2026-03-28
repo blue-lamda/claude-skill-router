@@ -34,6 +34,12 @@ At 10 skills it's fine. At 50 it gets messy. At 500 it breaks.
 
 The router keeps itself up to date automatically via a file watcher that runs in the background.
 
+### Does this replace `/skill_name` slash commands?
+
+Not entirely. `/skill_name` is Claude Code's mechanism for explicitly loading a skill — that still works the same way. What the router adds is a **natural language layer on top**: instead of typing `/qa test my site`, you can say *"can you test my site and find bugs"* and the router figures out that means `qa` and loads it.
+
+The router only works when it's already loaded into your Claude session. Either invoke it once with `/skill-router`, or set up a hook to auto-load it at session start. Without one of those, Claude doesn't know the router exists and you're back to slash commands.
+
 ---
 
 ## How It All Works
